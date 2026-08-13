@@ -6,8 +6,10 @@ import Chat from "@carbon/icons-react/es/Chat";
 import Close from "@carbon/icons-react/es/Close";
 import Dashboard from "@carbon/icons-react/es/Dashboard";
 import Partnership from "@carbon/icons-react/es/Partnership";
+import Phone from "@carbon/icons-react/es/Phone";
 import Settings from "@carbon/icons-react/es/Settings";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
+import { Badge } from "@crm/ui/components/badge";
 import { Button } from "@crm/ui/components/button";
 import { Icon } from "@crm/ui/components/icon";
 import {
@@ -22,12 +24,14 @@ import {
 	TooltipTrigger,
 } from "@crm/ui/components/tooltip";
 import { cn } from "@crm/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { AgentBuilderSidebar } from "@/components/agent-builder/agent-builder-sidebar";
 import { usePrefetchSection } from "@/components/crm/section-prefetch";
 import { useMobileNav } from "@/components/mobile-nav";
+import { useTRPC } from "@/lib/trpc/client";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 
 type RailItem = {
@@ -36,9 +40,10 @@ type RailItem = {
 	icon: CarbonIconType;
 	match: "exact" | "prefix";
 	related?: string[];
+	badge?: number;
 };
 
-const ITEMS: RailItem[] = [
+const ITEMS: Omit<RailItem, "badge">[] = [
 	{ title: "Overview", href: "/", icon: Dashboard, match: "exact" },
 	{
 		title: "Chat",
@@ -55,6 +60,7 @@ const ITEMS: RailItem[] = [
 		match: "prefix",
 	},
 	{ title: "Deals", href: "/deals", icon: Partnership, match: "prefix" },
+	{ title: "Calls", href: "/calls", icon: Phone, match: "prefix" },
 	{ title: "Settings", href: "/settings", icon: Settings, match: "prefix" },
 ];
 
@@ -63,6 +69,14 @@ function isActive(item: RailItem, pathname: string): boolean {
 		pathname === item.href ||
 		(item.match === "prefix" && pathname.startsWith(item.href)) ||
 		Boolean(item.related?.some((prefix) => pathname.startsWith(prefix)))
+	);
+}
+
+function RailBadge({ count }: { count: number }) {
+	return (
+		<Badge className="-top-1.5 -right-1.5 absolute">
+			{count > 99 ? "99+" : count}
+		</Badge>
 	);
 }
 
@@ -83,7 +97,7 @@ function RailLink({
 					variant="ghost"
 					size="icon"
 					className={cn(
-						"text-muted-foreground",
+						"relative text-muted-foreground",
 						active &&
 							"bg-muted text-foreground hover:bg-muted hover:text-foreground",
 					)}
@@ -98,6 +112,7 @@ function RailLink({
 					>
 						<Icon icon={item.icon} />
 						<span className="sr-only">{item.title}</span>
+						{item.badge ? <RailBadge count={item.badge} /> : null}
 					</Link>
 				</Button>
 			</TooltipTrigger>
@@ -140,6 +155,11 @@ function MobileRailLink({
 			>
 				<Icon icon={item.icon} />
 				<span>{item.title}</span>
+				{item.badge ? (
+					<Badge className="ml-auto">
+						{item.badge > 99 ? "99+" : item.badge}
+					</Badge>
+				) : null}
 			</Link>
 		</Button>
 	);
@@ -162,7 +182,7 @@ function MobileRailIconLink({
 			variant="ghost"
 			size="icon"
 			className={cn(
-				"text-muted-foreground",
+				"relative text-muted-foreground",
 				active &&
 					"bg-muted text-foreground hover:bg-muted hover:text-foreground",
 			)}
@@ -177,6 +197,7 @@ function MobileRailIconLink({
 			>
 				<Icon icon={item.icon} />
 				<span className="sr-only">{item.title}</span>
+				{item.badge ? <RailBadge count={item.badge} /> : null}
 			</Link>
 		</Button>
 	);
@@ -206,10 +227,16 @@ export function AppIconRailFallback() {
 }
 
 export function AppIconRail() {
+	const trpc = useTRPC();
 	const pathname = usePathname();
 	const workspaceUrl = useWorkspaceUrl();
 	const { open, setOpen } = useMobileNav();
 	const prefetchSection = usePrefetchSection();
+
+	const pendingCallsQuery = useQuery({
+		...trpc.calls.pendingCount.queryOptions(),
+		refetchInterval: 60_000,
+	});
 
 	const items = useMemo(
 		() =>
@@ -218,8 +245,9 @@ export function AppIconRail() {
 				section: item.href,
 				href: workspaceUrl(item.href),
 				related: item.related?.map((path) => workspaceUrl(path)),
+				badge: item.title === "Calls" ? pendingCallsQuery.data : undefined,
 			})),
-		[workspaceUrl],
+		[workspaceUrl, pendingCallsQuery.data],
 	);
 	const inChat = items.some(
 		(item) => item.title === "Chat" && isActive(item, pathname),

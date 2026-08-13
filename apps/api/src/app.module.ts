@@ -7,6 +7,7 @@ import { AgentModule } from "./agent/agent.module";
 import { AuthModule } from "./auth/auth.module";
 import { BackfillModule } from "./backfill/backfill.module";
 import { AppCacheModule } from "./cache/cache.module";
+import { CallsModule } from "./calls/calls.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { validateEnv } from "./config/env.validation";
 import { ContactsModule } from "./contacts/contacts.module";
@@ -56,6 +57,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		FieldsModule,
 		ActivitiesModule,
 		AgentModule,
+		CallsModule,
 		DashboardModule,
 		SearchModule,
 		MailboxModule,
