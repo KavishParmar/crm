@@ -23,14 +23,15 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  ownedCompanies Company[]           @relation("CompanyOwner")
-  ownedContacts  Contact[]           @relation("ContactOwner")
-  ownedDeals     Deal[]              @relation("DealOwner")
-  activities     Activity[]          @relation("ActivityAuthor")
-  mailboxSyncs   MailboxSync[]
-  factDecisions  ContactFact[]       @relation("FactDecider")
-  conversations  AgentConversation[] @relation("ConversationOwner")
-  fieldValues    FieldValue[]        @relation("FieldValueUser")
+  ownedCompanies  Company[]           @relation("CompanyOwner")
+  ownedContacts   Contact[]           @relation("ContactOwner")
+  ownedDeals      Deal[]              @relation("DealOwner")
+  activities      Activity[]          @relation("ActivityAuthor")
+  classifiedCalls Call[]              @relation("CallClassifier")
+  mailboxSyncs    MailboxSync[]
+  factDecisions   ContactFact[]       @relation("FactDecider")
+  conversations   AgentConversation[] @relation("ConversationOwner")
+  fieldValues     FieldValue[]        @relation("FieldValueUser")
 
   createdAgentDefinitions AgentDefinition[]             @relation("AgentDefinitionCreator")
   createdAgentVersions    AgentVersion[]                @relation("AgentVersionCreator")
@@ -1027,6 +1028,8 @@ model Activity {
   emailThread     EmailThread?   @relation(fields: [emailThreadId], references: [id], onDelete: Cascade)
   calendarEventId String?        @unique
   calendarEvent   CalendarEvent? @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  callId          String?        @unique
+  call            Call?          @relation(fields: [callId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1157,6 +1160,47 @@ model CalendarEvent {
   @@index([companyId, startsAt])
   @@index([contactId, startsAt])
   @@map("calendarEvent")
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallOutcome {
+  ATTENDED
+  REJECTED
+  TRAINED
+  FRONT_DESK
+  OWNER_TALK
+}
+
+model Call {
+  id            String        @id @default(cuid())
+  twilioCallSid String        @unique
+  direction     CallDirection
+  fromNumber    String
+  toNumber      String
+  status        String
+  durationSec   Int?
+  recordingUrl  String?
+  startedAt     DateTime?
+  endedAt       DateTime?
+
+  outcome        CallOutcome?
+  note           String?
+  classifiedAt   DateTime?
+  classifiedById String?
+  classifiedBy   User?        @relation("CallClassifier", fields: [classifiedById], references: [id], onDelete: SetNull)
+
+  activity Activity?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("call")
 }
 
 model CalendarAttendee {

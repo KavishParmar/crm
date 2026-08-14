@@ -118,6 +118,18 @@ export class EnvironmentVariables {
 	@IsOptional()
 	@IsString()
 	CRM_TELEMETRY_DISABLED?: string;
+
+	@IsOptional()
+	@IsString()
+	TWILIO_ACCOUNT_SID?: string;
+
+	@IsOptional()
+	@IsString()
+	TWILIO_AUTH_TOKEN?: string;
+
+	@IsOptional()
+	@IsString()
+	TWILIO_PHONE_NUMBER?: string;
 }
 
 export function validateEnv(
